@@ -1,0 +1,20 @@
+.sliderContainer {
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-corral-border-radius);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slider {
+  width: 100%;
+}
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+}

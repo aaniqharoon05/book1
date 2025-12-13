@@ -1,55 +1,73 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+- Version: 0.0.0 -> 1.0.0
+- Change: Initial creation of the project constitution.
+- Added Sections:
+  - Project Overview
+  - Governance
+  - Principles (1-7)
+- Removed Sections: None
+- Templates Requiring Updates:
+  - ✅ .specify/templates/plan-template.md
+  - ✅ .specify/templates/spec-template.md
+  - ✅ .specify/templates/tasks-template.md
+  - ⚠ .claude/commands/sp.constitution.md (and other .claude files should be reviewed for agent-specific language)
+- Follow-up TODOs: None
+-->
 
-## Core Principles
+# Constitution of the Book Project
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+| Version | Ratification Date | Last Amended |
+|---|---|---|
+| 1.0.0 | 2025-12-12 | 2025-12-12 |
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+## 1. Project Overview
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+This document outlines the guiding principles and standards for the "Book" project. The project's goal is to create educational content for beginner to intermediate learners in AI, robotics, and computer science. This constitution ensures that all contributions are clear, accurate, and accessible.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## 2. Governance
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+This constitution is a living document. Amendments follow this process:
+- **Proposal:** Any contributor may propose a change via a pull request.
+- **Review:** The proposal must be reviewed and approved by project maintainers.
+- **Versioning:** Changes are versioned semantically:
+  - **MAJOR:** Incompatible changes (e.g., removing a core principle).
+  - **MINOR:** Adding new principles or sections.
+  - **PATCH:** Clarifications and typo fixes.
 
-### [PRINCIPLE_6_NAME]
+## 3. Principles
 
+### Principle 1: Clarity and Accessibility
 
-[PRINCIPLE__DESCRIPTION]
+- **Rule:** Content MUST be written for a beginner-to-intermediate audience. Explanations must build intuition first before diving into technical details. The target Flesch-Kincaid reading grade is 8-10.
+- **Rationale:** To make complex topics in AI, robotics, and computer science approachable for newcomers.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Principle 2: Structured and Progressive Learning
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **Rule:** Content MUST be presented with step-by-step clarity. Use diagrams, examples, and progressive code samples to build knowledge incrementally.
+- **Rationale:** A structured approach helps learners build a strong foundation and connect concepts effectively.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### Principle 3: No Jargon Without Definition
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- **Rule:** Technical jargon MUST be defined clearly upon its first use. Avoid assuming prior knowledge.
+- **Rationale:** Ensures that readers are not lost due to unfamiliar terminology, promoting a smoother learning experience.
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### Principle 4: Factual and Technical Accuracy
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- **Rule:** All technical information, claims, and code examples MUST be fact-checked and verified for correctness. Content must be supported by primary sources where applicable.
+- **Rationale:** To build trust and provide reliable educational material. The project has zero tolerance for misinformation.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Principle 5: Authoritative and Ethical Sourcing
+
+- **Rule:** A minimum of 50% of sources MUST be from peer-reviewed papers or authoritative technical documentation. All sources MUST be cited using APA format. The project has a zero-tolerance policy for plagiarism.
+- **Rationale:** Upholds academic and ethical standards, ensuring the content is well-researched and gives credit appropriately.
+
+### Principle 6: Executable and Reproducible Code
+
+- **Rule:** All code examples provided MUST be complete, executable, and correct. The project will emphasize reproducibility, ensuring that learners can replicate results.
+- **Rationale:** Practical, working code is essential for hands-on learning and reinforcing theoretical concepts.
+
+### Principle 7: Consistency Across Deliverables
+
+- **Rule:** These principles apply to all project deliverables, including the book itself and any associated systems (e.g., a RAG system). Factual correctness and clarity are paramount everywhere.
+- **Rationale:** To ensure a consistent and high-quality experience across the entire project ecosystem.

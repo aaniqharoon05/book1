@@ -1,0 +1,18 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.bookSidebar.category.Chapter 1: The Robotic Nervous System (ROS 2)": {
+    "message": "Chapter 1: The Robotic Nervous System (ROS 2)",
+    "description": "The label for category 'Chapter 1: The Robotic Nervous System (ROS 2)' in sidebar 'bookSidebar'"
+  },
+  "sidebar.bookSidebar.category.Chapter 2: The Digital Twin (Gazebo & Unity)": {
+    "message": "Chapter 2: The Digital Twin (Gazebo & Unity)",
+    "description": "The label for category 'Chapter 2: The Digital Twin (Gazebo & Unity)' in sidebar 'bookSidebar'"
+  },
+  "sidebar.bookSidebar.category.Chapter 3: The AI-Robot Brain (NVIDIA Isaac)": {
+    "message": "Chapter 3: The AI-Robot Brain (NVIDIA Isaac)",
+    "description": "The label for category 'Chapter 3: The AI-Robot Brain (NVIDIA Isaac)' in sidebar 'bookSidebar'"
+  }
+}

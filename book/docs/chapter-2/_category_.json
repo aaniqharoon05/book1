@@ -1,0 +1,8 @@
+{
+  "label": "Chapter 2: The Digital Twin (Gazebo & Unity)",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Learn how to create virtual replicas of your robot and its environment for safe and efficient testing."
+  }
+}
