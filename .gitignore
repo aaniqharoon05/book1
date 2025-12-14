@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+*.egg-info/
+.Python
+build/
+develop-eggs/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.pyo
+*.rej
+*.bak
+*.swp
+*.swo
+
+# Project specific
+.vscode/
+.idea/
+.DS_Store
+*.tmp
+*.log
+.env
+.env.*
