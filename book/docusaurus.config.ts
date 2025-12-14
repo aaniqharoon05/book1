@@ -11,8 +11,9 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://your-docusaurus-site.example.com', // TODO: Update with actual URL
+  url: 'https://book1.vercel.app',
   baseUrl: '/',
+  
 
   organizationName: 'YourOrg', // TODO: Update with actual GitHub org/user name.
   projectName: 'physical-ai-book', // TODO: Update with actual repo name.

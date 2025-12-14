@@ -1,0 +1,176 @@
+openapi: 3.0.0
+info:
+  title: RAG Content Ingestion API
+  description: API for ingesting book content into vector database
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /api/v1/ingest:
+    post:
+      summary: Ingest book content from URL
+      description: Fetches content from provided URL, processes it, and stores embeddings in Qdrant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_url
+              properties:
+                source_url:
+                  type: string
+                  format: uri
+                  description: URL of the book content to ingest
+                  example: "https://book1-eight.vercel.app/chapter1"
+                chunk_size:
+                  type: integer
+                  description: Size of text chunks in tokens (default 512)
+                  example: 512
+                metadata:
+                  type: object
+                  description: Additional metadata to store with the content
+                  example: {"category": "machine-learning", "author": "author-name"}
+      responses:
+        '200':
+          description: Content successfully ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  chunks_processed:
+                    type: integer
+                    example: 24
+                  collection_name:
+                    type: string
+                    example: "chatbot_embedding"
+                  message:
+                    type: string
+                    example: "Successfully ingested 24 text chunks"
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid URL provided"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to process content"
+  
+  /api/v1/ingest/batch:
+    post:
+      summary: Batch ingest multiple book content URLs
+      description: Fetches content from multiple URLs, processes them, and stores embeddings in Qdrant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_urls
+              properties:
+                source_urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  description: Array of URLs to ingest
+                  example: ["https://book1-eight.vercel.app/chapter1", "https://book1-eight.vercel.app/chapter2"]
+                chunk_size:
+                  type: integer
+                  description: Size of text chunks in tokens (default 512)
+                  example: 512
+      responses:
+        '200':
+          description: Batch content successfully ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  total_urls:
+                    type: integer
+                    example: 5
+                  total_chunks:
+                    type: integer
+                    example: 120
+                  collection_name:
+                    type: string
+                    example: "chatbot_embedding"
+                  message:
+                    type: string
+                    example: "Successfully ingested 5 URLs with 120 text chunks"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to process batch ingestion"
+  
+  /api/v1/validate:
+    get:
+      summary: Validate ingestion pipeline
+      description: Runs test queries to validate the ingestion and retrieval process
+      responses:
+        '200':
+          description: Validation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        query:
+                          type: string
+                          example: "What is machine learning?"
+                        retrieved_chunks:
+                          type: integer
+                          example: 3
+                        similarity_scores:
+                          type: array
+                          items:
+                            type: number
+                            example: 0.85
+        '500':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to validate ingestion pipeline"
