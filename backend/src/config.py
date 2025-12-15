@@ -19,8 +19,8 @@ class Settings:
     # Content processing settings
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", 512))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", 20))  # Number of characters to overlap
-    _SOURCE_URL: str = os.getenv("SOURCE_URL", "https://physical-ai-kappa.vercel.app/")
-    SITEMAP_URL : str = str("https://physical-ai-kappa.vercel.app/sitemap.xml")
+    _SOURCE_URL: str = os.getenv("SOURCE_URL", "https://physical-ai-robotics-sable.vercel.app/")
+    SITEMAP_URL : str = str("https://physical-ai-robotics-sable.vercel.app/sitemap.xml")
 
     @property
     def SOURCE_URL(self) -> str:

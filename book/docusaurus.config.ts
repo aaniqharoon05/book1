@@ -11,7 +11,7 @@ const config: Config = {
     v4: true,
   },
 
-  url: '',
+  url: 'https://physical-ai-robotics-sable.vercel.app',
   baseUrl: '/',
   
 

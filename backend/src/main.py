@@ -32,22 +32,37 @@ from typing import Optional
 
 def get_all_urls():
     """
-    Get all URLs from the sitemap at https://physical-ai-kappa.vercel.app/sitemap.xml.
+    Get all URLs from the sitemap, with fallback if sitemap doesn't exist.
 
     Returns:
-        List of URLs from the sitemap
+        List of URLs from the sitemap or a default list if sitemap is unavailable
     """
-    logger.info(f"Fetching URLs from sitemap: {settings.SITEMAP_URL}")
-    urls = parse_sitemap(settings.SITEMAP_URL)
+    try:
+        logger.info(f"Fetching URLs from sitemap: {settings.SITEMAP_URL}")
+        urls = parse_sitemap(settings.SITEMAP_URL)
 
-    # Fix URLs if they contain the placeholder domain
-    fixed_urls = []
-    for url in urls:
-        fixed_url = url.replace("https://your-docusaurus-site.example.com", settings.SOURCE_URL.rstrip('/'))
-        fixed_urls.append(fixed_url)
+        # Fix URLs if they contain the placeholder domain
+        fixed_urls = []
+        for url in urls:
+            fixed_url = url.replace("https://your-docusaurus-site.example.com", settings.SOURCE_URL.rstrip('/'))
+            fixed_urls.append(fixed_url)
 
-    logger.info(f"Retrieved {len(fixed_urls)} URLs from sitemap (fixed domains)")
-    return fixed_urls
+        logger.info(f"Retrieved {len(fixed_urls)} URLs from sitemap (fixed domains)")
+        return fixed_urls
+    except Exception as e:
+        logger.warning(f"Sitemap not available at {settings.SITEMAP_URL}: {e}")
+        logger.info("Using default URLs as fallback")
+
+        # Return a default set of URLs as a fallback
+        default_urls = [
+            f"{settings.SOURCE_URL}",
+            f"{settings.SOURCE_URL.rstrip('/')}/about",
+            f"{settings.SOURCE_URL.rstrip('/')}/contact",
+            f"{settings.SOURCE_URL.rstrip('/')}/documentation",
+        ]
+
+        logger.info(f"Using {len(default_urls)} default URLs as fallback")
+        return default_urls
 
 def extract_text_from_url_with_retry(url: str, max_retries: int = 3) -> str:
     """
