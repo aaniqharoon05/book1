@@ -1,53 +1,113 @@
-# RAG Content Ingestion Pipeline
+# RAG Retrieval Validation API
 
-This project implements a backend service that extracts content from book URLs, processes the text, generates embeddings using Cohere, and stores them in Qdrant vector database with metadata. This enables semantic search capabilities for the book content as required by the project's RAG system.
+This API provides validation capabilities for RAG (Retrieval-Augmented Generation) retrieval pipelines. It allows testing the accuracy and performance of the retrieval system by submitting test queries and evaluating the relevance of returned document chunks.
 
-## Setup
+## Features
+
+- Validate retrieval accuracy by submitting test queries and evaluating relevance of returned results
+- Performance benchmarking with configurable load testing
+- Integration testing to verify all system components
+- Comprehensive logging and monitoring capabilities
+
+## Architecture
+
+The system consists of the following components:
+
+- **Models** (`src/models/`): Pydantic models for data validation
+- **Services** (`src/services/`): Core business logic in `rag_validation_service.py`
+- **API** (`src/api/`): FastAPI endpoints in `endpoints/validation.py`
+- **Configuration** (`src/config.py`): Environment configuration
+
+## Installation
 
 1. Clone the repository
-2. Create a virtual environment (optional but recommended):
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+2. Navigate to the backend directory
 3. Install dependencies:
-   ```bash
-   uv sync  # or pip install -e .
-   ```
-4. Copy the `.env.example` file to `.env` and update with your configuration:
-   ```bash
-   cp .env.example .env
-   ```
-5. Update the `.env` file with your Cohere API key and Qdrant configuration
 
-## Usage
-
-Run the ingestion pipeline:
 ```bash
-cd backend
-python src/main.py
+pip install -r requirements.txt
 ```
 
-## Configuration
+4. Set up environment variables (see `.env.example`)
 
-The application uses the following environment variables:
+## API Endpoints
 
-- `COHERE_API_KEY`: Your Cohere API key
-- `COHERE_EMBED_MODEL`: Cohere embedding model to use (default "embed-english-v3.0")
-- `QDRANT_URL`: URL of your Qdrant instance
-- `QDRANT_API_KEY`: API key for Qdrant (if using cloud)
-- `QDRANT_PORT`: Port for Qdrant (default 6333)
-- `CHUNK_SIZE`: Size of text chunks in tokens (default 512)
-- `CHUNK_OVERLAP`: Number of characters to overlap between chunks (default 20)
-- `SOURCE_URL`: Base URL for the book content (default https://book1-eight.vercel.app/)
+### Validation Endpoints
 
-## Architecture Overview
+- `POST /api/v1/validate` - Submit a test query for validation
+- `POST /api/v1/validate/configurable` - Submit a test query with configurable parameters (top-k, similarity threshold)
+- `POST /api/v1/benchmark` - Run performance benchmark tests
+- `POST /api/v1/benchmark/concurrent` - Run concurrent benchmark tests
 
-The ingestion pipeline follows this process:
+### Health Check Endpoints
 
-1. **Fetch Content**: Retrieve all pages from the sitemap at https://book1-eight.vercel.app/sitemap.xml
-2. **Parse & Clean**: Extract clean text content while removing navigation elements
-3. **Chunk**: Split content into appropriately sized segments
-4. **Embed**: Generate vector embeddings using Cohere
-5. **Store**: Save embeddings to Qdrant with metadata
-6. **Validate**: Test retrieval with sample queries
+- `GET /api/v1/health` - Check API health
+- `GET /api/v1/health/services` - Check health of external services (Cohere, Qdrant)
+- `GET /api/v1/health/integration` - Run comprehensive integration tests
+
+## Usage Examples
+
+### Validate a Query
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/validate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query_id": "test1",
+    "text": "What are the benefits of RAG?",
+    "expected_chunks": ["RAG combines retrieval with generation...", "Benefits include..."]
+  }'
+```
+
+### Run a Benchmark
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/benchmark" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "query_id": "test1",
+      "text": "What are the benefits of RAG?"
+    },
+    {
+      "query_id": "test2",
+      "text": "How does vector search work?"
+    }
+  ]'
+```
+
+## Environment Variables
+
+Create a `.env` file with the following variables:
+
+- `QDRANT_HOST`: Host for Qdrant vector database (default: localhost)
+- `QDRANT_PORT`: Port for Qdrant vector database (default: 6333)
+- `QDRANT_COLLECTION_NAME`: Name of the collection to search (default: document_chunks)
+- `COHERE_API_KEY`: API key for Cohere embedding service
+- `LOG_LEVEL`: Logging level (default: INFO)
+
+## Running the Application
+
+```bash
+python -m src.api.main
+```
+
+Or with uvicorn:
+
+```bash
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## Running Tests
+
+```bash
+pytest tests/
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
