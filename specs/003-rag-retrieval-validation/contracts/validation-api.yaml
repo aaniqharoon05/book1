@@ -1,0 +1,257 @@
+openapi: 3.0.1
+info:
+  title: RAG Retrieval Pipeline Validation API
+  description: API for validating the RAG retrieval pipeline accuracy and performance
+  version: 1.0.0
+paths:
+  /validation/test-query:
+    post:
+      summary: Submit a test query for validation
+      description: Submit a test query to validate the RAG retrieval pipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestQuery'
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationReport'
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+  /validation/run-benchmark:
+    post:
+      summary: Run performance benchmark
+      description: Execute performance benchmark tests on the retrieval pipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenchmarkRequest'
+      responses:
+        '200':
+          description: Benchmark results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkResults'
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+  /validation/test-queries:
+    get:
+      summary: List test queries
+      description: Retrieve a list of available test queries
+      responses:
+        '200':
+          description: List of test queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestQuery'
+        '500':
+          description: Internal server error
+    post:
+      summary: Create a new test query
+      description: Add a new test query for validation purposes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestQuery'
+      responses:
+        '201':
+          description: Test query created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestQuery'
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    TestQuery:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the test query
+        query_text:
+          type: string
+          description: The actual text of the query to be submitted to the RAG system
+        expected_chunks:
+          type: array
+          items:
+            type: string
+          description: List of expected document chunks that should be retrieved
+        test_scenario:
+          type: string
+          description: Description of the testing scenario this query represents
+        parameters:
+          type: object
+          description: Optional retrieval parameters (top-k, similarity threshold, etc.)
+          properties:
+            top_k:
+              type: integer
+              description: Number of top results to retrieve
+            similarity_threshold:
+              type: number
+              description: Minimum similarity threshold for results (0-1)
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the test query was created
+      required:
+        - query_text
+
+    RetrievedChunk:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the retrieved chunk
+        content:
+          type: string
+          description: The actual text content of the document chunk
+        metadata:
+          type: object
+          description: Additional metadata associated with the chunk (source document, page number, etc.)
+        relevance_score:
+          type: number
+          description: Numerical value indicating the semantic similarity to the query
+          minimum: 0
+          maximum: 1
+        position_in_results:
+          type: integer
+          description: The rank position of this chunk in the retrieval results
+        vector_id:
+          type: string
+          description: Identifier for the vector representation in the database
+
+    ValidationReport:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the validation report
+        test_query_id:
+          type: string
+          description: Reference to the test query
+        retrieved_chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetrievedChunk'
+          description: List of all chunks retrieved during the test
+        accuracy_metrics:
+          type: object
+          description: Detailed metrics on retrieval accuracy
+          properties:
+            total_retrieved:
+              type: integer
+              description: Total number of chunks retrieved
+            relevant_count:
+              type: integer
+              description: Number of relevant chunks
+            relevance_percentage:
+              type: number
+              description: Percentage of relevant chunks (0-100)
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+        validation_status:
+          type: string
+          description: Pass/fail status of the validation test
+          enum: [pass, fail, partial]
+        issues_found:
+          type: array
+          items:
+            type: string
+          description: List of any issues identified during validation
+        engineer_notes:
+          type: string
+          description: Any additional notes from the validating engineer
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the report was generated
+      required:
+        - test_query_id
+        - retrieved_chunks
+        - validation_status
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        response_time_ms:
+          type: number
+          description: Time taken to retrieve results in milliseconds
+        throughput_qps:
+          type: number
+          description: Queries per second processed (if testing multiple queries)
+        concurrent_queries:
+          type: integer
+          description: Number of concurrent queries during the test
+        timestamp:
+          type: string
+          format: date-time
+          description: When the metric was recorded
+        test_environment:
+          type: string
+          description: Environment where the test was run (dev/staging/prod)
+
+    BenchmarkRequest:
+      type: object
+      properties:
+        queries:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestQuery'
+          description: List of queries to run in the benchmark
+        concurrent_users:
+          type: integer
+          default: 1
+          description: Number of concurrent users to simulate
+        iterations:
+          type: integer
+          default: 1
+          description: Number of times to run each query
+
+    BenchmarkResults:
+      type: object
+      properties:
+        average_response_time_ms:
+          type: number
+          description: Average response time across all queries
+        p95_response_time_ms:
+          type: number
+          description: 95th percentile response time
+        p99_response_time_ms:
+          type: number
+          description: 99th percentile response time
+        throughput_qps:
+          type: number
+          description: Average throughput in queries per second
+        success_rate:
+          type: number
+          description: Percentage of successful queries (0-100)
+        total_queries:
+          type: integer
+          description: Total number of queries executed
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerformanceMetrics'
+          description: Detailed results for each query
