@@ -32,7 +32,7 @@ from typing import Optional
 
 def get_all_urls():
     """
-    Get all URLs from the sitemap at https://book1-eight.vercel.app/sitemap.xml.
+    Get all URLs from the sitemap at https://physical-ai-kappa.vercel.app/sitemap.xml.
 
     Returns:
         List of URLs from the sitemap

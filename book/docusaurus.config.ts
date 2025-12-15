@@ -11,7 +11,7 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://book1.vercel.app',
+  url: '',
   baseUrl: '/',
   
 
