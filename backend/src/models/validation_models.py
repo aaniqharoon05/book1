@@ -1,14 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel , Field
 from typing import List, Optional
 from datetime import datetime
 
 
+
 class TestQuery(BaseModel):
-    """Model for a test query submitted for validation"""
     query_id: str
     text: str
-    expected_chunks: Optional[List[str]] = None
-    metadata: Optional[dict] = None
+    expected_chunks: Optional[List[str]] = Field(default_factory=list)
+
 
 
 class RetrievedChunk(BaseModel):
@@ -41,3 +41,4 @@ class PerformanceMetrics(BaseModel):
     p99_response_time: Optional[float] = None
     total_queries: int
     timestamp: datetime = datetime.now()
+

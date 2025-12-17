@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 import logging
-from ..models.validation_models import TestQuery, ValidationReport
-from ..services.rag_validation_service import RAGValidationService
-from ..api.auth import verify_api_key
+from ...models.validation_models import TestQuery, ValidationReport
+from ...services.rag_validation_service import RAGValidationService
+from ...api.auth import verify_api_key
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

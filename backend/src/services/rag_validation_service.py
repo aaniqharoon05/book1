@@ -6,7 +6,15 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import cohere
 from ..models.validation_models import TestQuery, RetrievedChunk, ValidationReport, PerformanceMetrics
-from ..config import QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION_NAME, COHERE_API_KEY
+from ..config import (
+    QDRANT_HOST,
+    QDRANT_PORT,
+    QDRANT_URL,
+    QDRANT_API_KEY,
+    QDRANT_COLLECTION_NAME,
+    COHERE_API_KEY,
+)
+
 
 
 class RAGValidationService:
@@ -15,71 +23,73 @@ class RAGValidationService:
     """
 
     def __init__(self):
-        # Initialize Qdrant client
-        self.qdrant_client = QdrantClient(
-            host=QDRANT_HOST,
-            port=QDRANT_PORT
-        )
+    # Set up logging FIRST
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        # Initialize Qdrant client (cloud-first, fallback to local)
+        if QDRANT_URL:
+            self.logger.info("Using Qdrant Cloud")
+            self.qdrant_client = QdrantClient(
+                url=QDRANT_URL,
+                api_key=QDRANT_API_KEY,
+            )
+        else:
+            self.logger.info("Using local Qdrant")
+            self.qdrant_client = QdrantClient(
+                host=QDRANT_HOST,
+                port=QDRANT_PORT,
+            )
 
         # Initialize Cohere client for embeddings
         self.cohere_client = cohere.Client(COHERE_API_KEY)
 
         # Collection name for document chunks
         self.collection_name = QDRANT_COLLECTION_NAME
-        
-        # Set up logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
 
     def query_vector_db(self, query_text: str, top_k: int = 10, similarity_threshold: float = 0.5) -> List[RetrievedChunk]:
-        """
-        Query the vector database with configurable parameters
-        """
         self.logger.info(f"Starting vector database query for: '{query_text[:50]}...'")
         query_start_time = time.time()
 
         try:
-            # Generate embedding for the query text
-            self.logger.debug("Generating embedding for query text")
             response = self.cohere_client.embed(
                 texts=[query_text],
-                model='embed-english-v3.0',
-                input_type="search_query"
+                model="embed-english-v3.0",
+                input_type="search_query",
             )
             query_embedding = response.embeddings[0]
-            self.logger.debug(f"Generated embedding with {len(query_embedding)} dimensions")
 
-            # Query the Qdrant collection
-            self.logger.debug(f"Searching Qdrant collection '{self.collection_name}' with top_k={top_k}, similarity_threshold={similarity_threshold}")
-            search_results = self.qdrant_client.search(
+            search_results = self.qdrant_client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=top_k,
-                score_threshold=similarity_threshold
+                # score_threshold=similarity_threshold,
             )
-            self.logger.debug(f"Retrieved {len(search_results)} results from vector database")
 
-            # Convert results to RetrievedChunk objects
+            points = search_results.points
+            self.logger.debug(f"Retrieved {len(points)} results from vector database")
+
             retrieved_chunks = []
-            for i, result in enumerate(search_results):
-                chunk = RetrievedChunk(
-                    chunk_id=result.id,
-                    text=result.payload.get('text', ''),
-                    similarity_score=result.score,
-                    source_document=result.payload.get('source', ''),
-                    metadata=result.payload
+            for i, result in enumerate(points):
+                retrieved_chunks.append(
+                    RetrievedChunk(
+                        chunk_id=result.id,
+                        text=result.payload.get("text", ""),
+                        similarity_score=result.score,
+                        source_document=result.payload.get("source", ""),
+                        metadata=result.payload,
+                    )
                 )
-                retrieved_chunks.append(chunk)
-                self.logger.debug(f"Processed chunk {i+1}/{len(search_results)}: ID '{result.id}', Score {result.score:.3f}")
-
-            query_time = time.time() - query_start_time
-            self.logger.info(f"Vector database query completed in {query_time:.3f}s, retrieved {len(retrieved_chunks)} chunks")
+                self.logger.debug(f"Retrieved {len(points)} points from Qdrant")
+            self.logger.info(
+                f"Vector database query completed in {time.time() - query_start_time:.3f}s"
+            )
             return retrieved_chunks
 
         except Exception as e:
-            query_time = time.time() - query_start_time
-            self.logger.error(f"Error querying vector database after {query_time:.3f}s: {str(e)}")
+            self.logger.error(f"Error querying vector database: {str(e)}")
             raise
+
 
     def calculate_relevance_score(self, query_text: str, chunk_text: str) -> float:
         """
@@ -328,7 +338,8 @@ class RAGValidationService:
                 if "Cohere" in failure:
                     report["recommendations"].append("Verify COHERE_API_KEY is correctly set in environment")
                 elif "Qdrant" in failure:
-                    report["recommendations"].append("Check QDRANT_HOST and QDRANT_PORT configuration")
+                    report["recommendations"].append(
+                        "Verify QDRANT_URL, QDRANT_API_KEY, and collection existence in Qdrant Cloud")
                 elif "Query processing" in failure:
                     report["recommendations"].append("Verify Qdrant collection exists and contains data")
 
