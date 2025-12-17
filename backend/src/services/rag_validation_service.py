@@ -80,12 +80,7 @@ class RAGValidationService:
                         metadata=result.payload,
                     )
                 )
-                # self.logger.debug(
-                #     f"Processed chunk {i+1}/{len(points)}: ID '{result.id}', Score {result.score:.3f}"
-                # )
                 self.logger.debug(f"Retrieved {len(points)} points from Qdrant")
-
-
             self.logger.info(
                 f"Vector database query completed in {time.time() - query_start_time:.3f}s"
             )
