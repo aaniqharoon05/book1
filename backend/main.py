@@ -16,9 +16,45 @@ from typing import List
 import requests
 from bs4 import BeautifulSoup
 import re
+import xml.etree.ElementTree as ET
+from urllib.parse import urljoin, urlparse
+import hashlib
+import uuid
+from datetime import datetime
+import os
+from dotenv import load_dotenv
 
-from config import settings
-from utils import parse_sitemap
+# Load environment variables from .env file
+# Try to load from the same directory as this file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(script_dir, '.env')
+load_dotenv(dotenv_path)
+
+# Define settings directly from environment variables
+class Settings:
+    def __init__(self):
+        # Qdrant Configuration
+        self.QDRANT_URL: str = os.getenv("QDRANT_URL", "")
+        self.QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
+        self.QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
+        self.QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "chatbot_embedding")
+
+        # Cohere Configuration
+        self.COHERE_API_KEY: str = os.getenv("COHERE_API_KEY", "")
+        self.COHERE_EMBED_MODEL: str = os.getenv("COHERE_EMBED_MODEL", "embed-multilingual-v3.0")
+
+        # Source Configuration
+        self.SOURCE_URL: str = os.getenv("SOURCE_URL", "")
+        self.SITEMAP_URL: str = os.getenv("SITEMAP_URL", "")
+
+        # Content Processing Configuration
+        self.CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "512"))
+        self.CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "50"))
+
+        # Logging Configuration
+        self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+
+settings = Settings()
 
 # Set up logging
 logging.basicConfig(
@@ -123,7 +159,7 @@ def extract_text_from_url(url: str) -> str:
 
 def clean_html_content(soup: BeautifulSoup) -> str:
     """
-    Extract only main content from HTML using BeautifulSoup.
+    Extract only main content from HTML using BeautifulSoup, focusing specifically on book content.
 
     Args:
         soup: BeautifulSoup object with HTML content
@@ -131,28 +167,180 @@ def clean_html_content(soup: BeautifulSoup) -> str:
     Returns:
         Clean text content
     """
-    # Look for main content containers first
-    main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=re.compile("content|main|post|article", re.I))
+    # Define selectors for book content elements in common documentation/book platforms
+    content_selectors = [
+        # Docusaurus-specific content containers
+        'main div.container article',
+        'main div.theme-doc-markdown',
+        'article.main-article',
+        'div.doc-content',
+        'div.markdown',
 
-    if main_content:
-        soup = main_content
+        # Generic content containers
+        'main',
+        'article',
+        'div.content',
+        'div.main-content',
+        'div.post-content',
+        'div.article-content',
+
+        # Book-specific selectors
+        'div.chapter-content',
+        'section.book-content',
+        'div.page-content',
+        'main#content',
+        'div#main-content',
+
+        # Common class names for book/content areas
+        'div[class*="content"]',
+        'div[class*="article"]',
+        'div[class*="post"]',
+        'div[class*="chapter"]',
+        'div[class*="page"]'
+    ]
+
+    # Try to find main content area with these selectors
+    main_content = None
+
+    # More specific search for book documentation platforms
+    for selector in content_selectors:
+        main_content = soup.select_one(selector)
+        if main_content:
+            break
+
+    # If no specific content found, try looking for elements that usually hold book content
+    if not main_content:
+        # Look for content within specific tag patterns
+        content_containers = soup.find_all(['main', 'article', 'section'])
+        for container in content_containers:
+            # Check if the container has attributes that suggest it's content-focused
+            role_attr = container.get('role', '')
+            aria_labelledby = container.get('aria-labelledby', '')
+
+            if 'main' in role_attr or 'document' in aria_labelledby or len(container.get_text(strip=True)) > 100:
+                main_content = container
+                break
+
+    # If still no content found, use the body tag
+    if not main_content:
+        main_content = soup.body or soup.html
+
+    # Clone the content to work with
+    content_soup = BeautifulSoup(str(main_content), 'html.parser')
+
+    # More comprehensive removal of non-book content elements
+    non_content_selectors = [
+        # Navigation and menus
+        'nav',
+        'header',
+        'footer',
+        'aside',
+        '.nav',
+        '.navbar',
+        '.menu',
+        '.sidebar',
+        '.toc',  # Table of Contents
+        '.table-of-contents',
+
+        # Common non-content classes
+        '.header',
+        '.footer',
+        '.breadcrumb',
+        '.pagination',
+        '.tag',
+        '.tags',
+        '.author',
+        '.authors',
+        '.social-share',
+        '.share-buttons',
+        '.advertisement',
+        '.ads',
+        '.banner',
+        '.cookie-consent',
+        '.consent-banner',
+        '.newsletter-signup',
+        '.signup-form',
+        '.related-posts',
+        '.comments-section',
+        '.disqus_thread',
+        '.advertisement',
+        '.promo',
+        '.callout',
+        '.alert',
+        '.notification',
+        '.top-link',
+        '.prev-next-links',
+        '.next-prev-navigation',
+
+        # Common IDs for non-content areas
+        '#nav',
+        '#navbar',
+        '#menu',
+        '#sidebar',
+        '#toc',
+        '#footer',
+        '#header',
+        '#breadcrumb',
+        '#pagination'
+    ]
+
+    for selector in non_content_selectors:
+        for element in content_soup.select(selector):
+            element.decompose()
+
+    # Remove elements with specific class names related to navigation/pagination
+    for element in content_soup.find_all(class_=re.compile(
+        r'(nav|menu|header|footer|sidebar|advertisement|ads|banner|cookie|breadcrumb|'
+        r'pagination|tag|author|social|share|related|comment|disqus|promo|callout|'
+        r'alert|notification|top-link|\bnext\b|\bprev\b|\bpagination\b|toc|table.*?contents)'
+    )):
+        element.decompose()
 
     # Remove script and style elements
-    for script in soup(["script", "style"]):
-        script.decompose()
-
-    # Remove navigation elements
-    for element in soup(["nav", "header", "footer", "aside"]):
+    for element in content_soup(["script", "style", "meta", "link"]):
         element.decompose()
 
-    # Remove elements with common class names for navigation and ads
-    for element in soup.find_all(class_=re.compile("nav|menu|header|footer|sidebar|advertisement|ads|banner|cookie")):
-        element.decompose()
+    # Focus on elements that typically contain actual book content
+    content_elements = content_soup.find_all([
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'div', 'span', 'pre', 'code', 'blockquote',
+        'ol', 'ul', 'li', 'dl', 'dt', 'dd',
+        'figure', 'figcaption', 'img', 'table', 'tr', 'td', 'th'
+    ])
 
-    # Get text content
-    text = soup.get_text()
+    # Filter content elements to include only those that don't match anti-patterns
+    valid_content = []
+    for elem in content_elements:
+        # Skip elements that are likely non-content
+        class_attr = elem.get('class', [])
+        id_attr = elem.get('id', '')
 
-    # Clean up text
+        # Convert to lowercase for comparison
+        class_list = ' '.join(class_attr).lower()
+
+        # Skip if element contains navigation-like text content
+        text_content = elem.get_text(strip=True)[:100].lower()
+        nav_indicators = ['next', 'previous', 'nav', 'menu', 'table of contents', 'toc',
+                         'chapter', 'part', 'section', 'index', 'outline', 'summary']
+
+        is_navigation_like = any(indicator in text_content for indicator in nav_indicators)
+        is_small_and_common = len(text_content) < 10 and any(word in text_content for word in
+                              ['next', 'prev', 'home', 'top', 'up', 'back', 'more'])
+
+        if not is_navigation_like and not is_small_and_common:
+            valid_content.append(elem)
+
+    # Extract clean text from valid content elements
+    clean_texts = []
+    for elem in valid_content:
+        text = elem.get_text(separator=' ', strip=True)
+        if text and len(text) > 5:  # Avoid very short text snippets
+            clean_texts.append(text)
+
+    # Join all valid content texts
+    text = ' '.join(clean_texts)
+
+    # Clean up text formatting
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     text = ' '.join(chunk for chunk in chunks if chunk)
@@ -180,49 +368,61 @@ def handle_malformed_html_content(html_content: str) -> str:
         clean_text = re.sub(r'<[^>]+>', ' ', html_content)
         return clean_text
 
+import re
+from typing import List
+
 def chunk_text(text: str, chunk_size: int = None, chunk_overlap: int = None) -> List[str]:
     """
-    Split text into appropriately sized segments.
+    Split text into word-based chunks with overlap, preserving sentence boundaries.
 
     Args:
         text: The text to chunk
-        chunk_size: Size of each chunk (default from config)
-        chunk_overlap: Number of characters to overlap between chunks (default from config)
+        chunk_size: Number of WORDS per chunk (default from settings)
+        chunk_overlap: Number of WORDS to overlap between chunks (default from settings)
 
     Returns:
-        List of text chunks
+        List of clean text chunks
     """
-    # Use config values if not provided
     if chunk_size is None:
         chunk_size = settings.CHUNK_SIZE
     if chunk_overlap is None:
         chunk_overlap = settings.CHUNK_OVERLAP
 
-    # For a more sophisticated approach, we'll chunk by characters while preserving sentences
-    sentences = re.split(r'[.!?]+', text)
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Split into sentences (keep punctuation)
+    sentences = re.split(r'(?<=[.!?])\s+', text)
 
     chunks = []
-    current_chunk = ""
+    current_words = []
 
     for sentence in sentences:
-        sentence = sentence.strip()
-        if sentence:  # Only process non-empty sentences
-            if len(current_chunk) + len(sentence) < chunk_size:
-                current_chunk += " " + sentence
-            else:
-                if current_chunk.strip():
-                    chunks.append(current_chunk.strip())
+        sentence_words = sentence.split()
 
-                # Apply overlap by taking the last part of the previous chunk
-                overlap_start = max(0, len(current_chunk) - chunk_overlap)
-                current_chunk = current_chunk[overlap_start:] + " " + sentence
+        # If adding this sentence stays within chunk size
+        if len(current_words) + len(sentence_words) <= chunk_size:
+            current_words.extend(sentence_words)
+        else:
+            # Save current chunk
+            if current_words:
+                chunks.append(" ".join(current_words))
 
-    # Add the last chunk if it's not empty
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
+            # Start new chunk with overlap
+            overlap_words = current_words[-chunk_overlap:] if chunk_overlap > 0 else []
+            current_words = overlap_words + sentence_words
 
-    logger.info(f"Text chunked into {len(chunks)} chunks (size: {chunk_size}, overlap: {chunk_overlap})")
+    # Add final chunk
+    if current_words:
+        chunks.append(" ".join(current_words))
+
+    logger.info(
+        f"Text chunked into {len(chunks)} chunks "
+        f"(words per chunk: {chunk_size}, overlap: {chunk_overlap})"
+    )
+
     return chunks
+
 
 def embed(texts: List[str]) -> List[List[float]]:
     """
@@ -387,12 +587,28 @@ def initialize_cohere_client():
 def initialize_qdrant_client():
     """Initialize and return a Qdrant client using connection details from config."""
     try:
-        client = QdrantClient(
-            url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY,
-            port=settings.QDRANT_PORT
-        )
-        logger.info("Qdrant client initialized successfully")
+        logger.info(f"Attempting to connect to Qdrant at: {settings.QDRANT_URL}")
+        logger.info(f"Using API key (first 10 chars): {settings.QDRANT_API_KEY[:10] if settings.QDRANT_API_KEY else 'None'}")
+        logger.info(f"Using port: {settings.QDRANT_PORT}")
+
+        # Check if this is a cloud instance URL
+        if "cloud.qdrant.io" in settings.QDRANT_URL:
+            logger.info("Detected Qdrant Cloud instance, initializing without port")
+            # For cloud instances, don't specify port to avoid conflicts
+            client = QdrantClient(
+                url=settings.QDRANT_URL,
+                api_key=settings.QDRANT_API_KEY
+            )
+        else:
+            logger.info("Using local Qdrant instance")
+            # For local instances, specify both URL and port
+            client = QdrantClient(
+                url=settings.QDRANT_URL,
+                api_key=settings.QDRANT_API_KEY,
+                port=settings.QDRANT_PORT
+            )
+
+            logger.info("Qdrant client initialized successfully")
         return client
     except Exception as e:
         logger.error(f"Failed to initialize Qdrant client: {e}")
@@ -451,6 +667,69 @@ def main():
             # Continue with next URL instead of stopping the entire process
 
     logger.info(f"RAG Content Ingestion Pipeline completed. Processed {total_processed}/{len(urls)} URLs, saved {total_chunks} chunks")
+
+
+# Import required modules for parse_sitemap function
+import xml.etree.ElementTree as ET
+from typing import List
+from urllib.parse import urljoin, urlparse
+
+
+def parse_sitemap(sitemap_url: str) -> List[str]:
+    """
+    Parse a sitemap XML file and return a list of URLs.
+
+    Args:
+        sitemap_url: URL of the sitemap XML file
+
+    Returns:
+        List of URLs found in the sitemap
+    """
+    try:
+        response = requests.get(sitemap_url)
+        response.raise_for_status()
+
+        # Parse the XML content
+        root = ET.fromstring(response.content)
+
+        # Handle namespaces - sitemap XML usually has a namespace
+        namespace = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+
+        urls = []
+        for url_elem in root.findall('sm:url', namespace):
+            loc_elem = url_elem.find('sm:loc', namespace)
+            if loc_elem is not None and loc_elem.text:
+                url = loc_elem.text.strip()
+                # Exclude URLs containing "blog" in the path
+                if '/blog' not in url and not url.endswith('/blog'):
+                    urls.append(url)
+
+        logger.info(f"Found {len(urls)} URLs in sitemap (excluding blog sections)")
+        return urls
+
+    except requests.RequestException as e:
+        logger.error(f"Error fetching sitemap: {e}")
+        raise
+    except ET.ParseError as e:
+        logger.error(f"Error parsing sitemap XML: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error parsing sitemap: {e}")
+        raise
+
+
+def check_sitemap():
+    """
+    Function to test/check the sitemap by fetching and printing its content.
+    This consolidates the functionality from check_sitemap.py
+    """
+    # Using the sitemap URL from settings, or a default if not available
+    sitemap_url = getattr(settings, 'SITEMAP_URL', 'https://physical-ai-robotics-sable.vercel.app/sitemap.xml')
+
+    response = requests.get(sitemap_url)
+    print("Status code:", response.status_code)
+    print("Response content (first 1000 chars):")
+    print(response.text[:1000])
 
 
 if __name__ == "__main__":
