@@ -6,7 +6,7 @@ This script orchestrates the entire process of:
 2. Extracting and cleaning text content
 3. Chunking the text
 4. Generating embeddings
-5. Storing in Qdrant
+5. Storing in Qdrant 
 """
 import logging
 from qdrant_client import QdrantClient
